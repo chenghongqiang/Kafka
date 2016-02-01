@@ -1,0 +1,70 @@
+package com.kewin.KafkaProducer;
+
+import kafka.consumer.Consumer;
+import kafka.consumer.ConsumerConfig;
+import kafka.consumer.ConsumerIterator;
+import kafka.consumer.KafkaStream;
+import kafka.javaapi.consumer.ConsumerConnector;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+/**
+ * Created by kewin.cheng on 2016/1/27.
+ */
+public class KafkaConsumer extends Thread{
+
+    private String topic;
+    private final ConsumerConnector consumer;
+
+    public KafkaConsumer(String topic){
+        super();
+        this.topic = topic;
+        consumer = createConsumer();
+    }
+
+    private static ConsumerConnector createConsumer() {
+        Properties props = new Properties();
+        //zookeeper 配置
+        props.put("zookeeper.connect", "10.1.2.56:2181");
+
+        //zk连接超时
+        props.put("zookeeper.session.timeout.ms", "400");
+        props.put("zookeeper.sync.time.ms", "200");
+        props.put("auto.commit.interval.ms", "1000");
+        props.put("exclude.internal.topics", "true");
+        //group 代表一个消费组
+        props.put("group.id", "1group");
+
+        //序列化类
+        props.put("serializer.class", "kafka.serializer.StringEncoder");
+
+        ConsumerConfig config = new ConsumerConfig(props);
+        return Consumer.createJavaConsumerConnector(config);
+    }
+
+    @Override
+    public void run(){
+
+        Map<String,Integer> topicCountMap = new HashMap<String,Integer>();
+        topicCountMap.put(topic,new Integer(1));
+
+        Map<String,List<KafkaStream<byte[],byte[]>>> consumerMap =
+                consumer.createMessageStreams(topicCountMap);
+        KafkaStream<byte[],byte[]> stream = consumerMap.get(topic).get(0);
+
+        ConsumerIterator<byte[],byte[]> it = stream.iterator();
+        System.out.println("---------------run-------------");
+        while(it.hasNext()){
+            System.out.println("---------------iterator-------------");
+            String message = new String(it.next().message());
+            System.out.println(message);
+        }
+
+    }
+
+    public static void main(String[] args){
+        new KafkaConsumer("test").start();
+    }
+}
